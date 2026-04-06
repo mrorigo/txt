@@ -165,25 +165,113 @@ fn visit(
     }
 
     // Special-case for markdown: 'inline' nodes contain text with potential formatting.
-    // Don't treat as leaf - always recurse. Handle inline code specially.
+    // Handle inline code detection by checking text between backticks.
     if lang == Lang::Markdown && kind == "inline" {
+        let source_str = std::str::from_utf8(source).unwrap_or("");
         let child_count = node.child_count();
-        let mut in_code_span = false;
-        for i in 0..child_count {
+
+        // Count backticks among children to determine if this is an inline code span
+        let backtick_count: usize = (0..child_count)
+            .filter_map(|i| node.child(i as u32).map(|c| c.kind() == "`"))
+            .filter(|&b| b)
+            .count();
+
+        if backtick_count >= 2 {
+            // This inline node contains backticks - it's inline code
+            // Highlight backticks and detect content between them
+            let node_start = node.start_byte();
+            let node_end = node.end_byte();
+            let text = source_str.get(node_start..node_end).unwrap_or("");
+
+            // Find positions of backticks
+            let backtick_positions: Vec<usize> = text
+                .match_indices('`')
+                .map(|(i, _)| node_start + i)
+                .collect();
+
+            // Highlight each backtick
+            for &pos in &backtick_positions {
+                if pos >= start_byte && pos < end_byte {
+                    spans.push(HighlightSpan {
+                        start: pos,
+                        end: pos + 1,
+                        kind: HighlightKind::Emphasis,
+                    });
+                }
+            }
+
+            // Highlight content between backticks as inline code
+            if backtick_positions.len() >= 2 {
+                for i in 0..backtick_positions.len() - 1 {
+                    let code_start = backtick_positions[i] + 1;
+                    let code_end = backtick_positions[i + 1];
+                    if code_start < code_end && code_start < end_byte && code_end > start_byte {
+                        let s = code_start.max(start_byte);
+                        let e = code_end.min(end_byte);
+                        if s < e {
+                            spans.push(HighlightSpan {
+                                start: s,
+                                end: e,
+                                kind: HighlightKind::InlineCode,
+                            });
+                        }
+                    }
+                }
+            }
+        } else {
+            // Not inline code - recurse normally
+            for i in 0..node.child_count() {
+                if let Some(child) = node.child(i as u32) {
+                    visit(child, lang, source, start_byte, end_byte, spans);
+                }
+            }
+        }
+        return;
+    }
+
+    // Special-case for markdown: fenced code blocks with embedded language highlighting
+    if lang == Lang::Markdown && kind == "fenced_code_block" {
+        handle_markdown_code_fence(node, source, start_byte, end_byte, spans);
+        return;
+    }
+
+    // Special-case for markdown: ATX headings - highlight marker and recurse into content
+    if lang == Lang::Markdown && kind.starts_with("atx_heading") {
+        for i in 0..node.child_count() {
             if let Some(child) = node.child(i as u32) {
                 let child_kind = child.kind();
-                if child_kind == "`" {
-                    in_code_span = !in_code_span;
-                    visit(child, lang, source, start_byte, end_byte, spans);
-                } else if in_code_span && child.child_count() == 0 {
-                    // Text inside backticks - highlight as inline code
+                // The marker is highlighted as Heading, content recurses normally
+                if child_kind.starts_with("atx_h") && child_kind.ends_with("marker") {
                     let s = child.start_byte().max(start_byte);
                     let e = child.end_byte().min(end_byte);
                     if s < e {
                         spans.push(HighlightSpan {
                             start: s,
                             end: e,
-                            kind: HighlightKind::InlineCode,
+                            kind: HighlightKind::Heading,
+                        });
+                    }
+                } else {
+                    visit(child, lang, source, start_byte, end_byte, spans);
+                }
+            }
+        }
+        return;
+    }
+
+    // Special-case for markdown: block quotes - highlight marker
+    if lang == Lang::Markdown && kind == "block_quote" {
+        for i in 0..node.child_count() {
+            if let Some(child) = node.child(i as u32) {
+                let child_kind = child.kind();
+                if child_kind == "block_quote_marker" || child_kind == "block_continuation" {
+                    let s = child.start_byte().max(start_byte);
+                    let e = child.end_byte().min(end_byte);
+                    if s < e {
+                        spans.push(HighlightSpan {
+                            start: s,
+                            end: e,
+                            kind: HighlightKind::Emphasis,
                         });
                     }
                 } else {
