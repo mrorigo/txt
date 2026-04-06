@@ -62,8 +62,8 @@ impl ThemeColors {
             syn_punctuation: Color::DarkGray,
             syn_heading: Color::Cyan,
             syn_link: Color::Rgb(78, 201, 176),
-            syn_emphasis: Color::White,
-            syn_codeblock: Color::DarkGray,
+            syn_emphasis: Color::Rgb(255, 203, 100),
+            syn_codeblock: Color::Rgb(78, 201, 176),
             text: Color::White,
             selection_bg: Color::Rgb(60, 80, 120),
             line_num_cur: Color::Yellow,
@@ -92,7 +92,7 @@ impl ThemeColors {
             syn_punctuation: Color::Rgb(248, 248, 242), // #f8f8f2 near-white
             syn_heading: Color::Rgb(102, 217, 239),     // #66d9ef cyan
             syn_link: Color::Rgb(102, 217, 239),        // #66d9ef cyan
-            syn_emphasis: Color::Rgb(248, 248, 242),    // #f8f8f2 near-white
+            syn_emphasis: Color::Rgb(255, 203, 100),    // amber/orange - visible
             syn_codeblock: Color::Rgb(117, 113, 94),    // #75715e gray-brown
             text: Color::Rgb(248, 248, 242),            // #f8f8f2
             selection_bg: Color::Rgb(73, 72, 62),       // #49483e
@@ -122,7 +122,7 @@ impl ThemeColors {
             syn_punctuation: Color::Rgb(168, 153, 132),     // #a89984 warm gray
             syn_heading: Color::Rgb(131, 165, 152),         // #83a598 teal
             syn_link: Color::Rgb(131, 165, 152),            // #83a598 teal
-            syn_emphasis: Color::Rgb(213, 196, 161),        // #d5c4a1 cream
+            syn_emphasis: Color::Rgb(250, 189, 47),         // #fabd2f yellow - visible
             syn_codeblock: Color::Rgb(168, 153, 132),       // #a89984 warm gray
             text: Color::Rgb(235, 219, 178),                // #ebdbb2
             selection_bg: Color::Rgb(80, 73, 69),           // dark warm
@@ -152,7 +152,7 @@ impl ThemeColors {
             syn_punctuation: Color::Rgb(76, 86, 106), // nord3 dark
             syn_heading: Color::Rgb(136, 192, 208),   // #88c0d0 nord8 light blue
             syn_link: Color::Rgb(136, 192, 208),      // #88c0d0 nord8 light blue
-            syn_emphasis: Color::Rgb(216, 222, 233),  // #d8dee9 nord4
+            syn_emphasis: Color::Rgb(235, 203, 139),  // #ebcb8b nord13 yellow - visible
             syn_codeblock: Color::Rgb(76, 86, 106),   // nord3 dark
             text: Color::Rgb(216, 222, 233),          // #d8dee9 nord4
             selection_bg: Color::Rgb(67, 76, 94),     // #434c5e nord2

@@ -5,7 +5,12 @@
 #### H4 Heading
 
 ## Emphasis & Inline Code
-**Bold text** and *italic* and `inline code`
+
+**This is working?** 
+
+**Bold and italic**
+
+  and *italic* and `inline code`
 ~~strikethrough~~ here
 
 ## Links

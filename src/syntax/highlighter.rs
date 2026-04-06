@@ -165,30 +165,34 @@ fn visit(
     }
 
     // Special-case for markdown: 'inline' nodes contain text with potential formatting.
-    // Handle inline code detection by checking text between backticks.
+    // Handle inline code and emphasis by analyzing the text and marker positions.
     if lang == Lang::Markdown && kind == "inline" {
-        let source_str = std::str::from_utf8(source).unwrap_or("");
         let child_count = node.child_count();
 
-        // Count backticks among children to determine if this is an inline code span
-        let backtick_count: usize = (0..child_count)
-            .filter_map(|i| node.child(i as u32).map(|c| c.kind() == "`"))
-            .filter(|&b| b)
-            .count();
+        // Collect all marker children
+        let mut asterisk_positions: Vec<usize> = Vec::new();
+        let mut backtick_positions: Vec<usize> = Vec::new();
+        for i in 0..child_count {
+            if let Some(child) = node.child(i as u32) {
+                let child_kind = child.kind();
+                let child_start = child.start_byte();
+                if child_kind == "*" {
+                    asterisk_positions.push(child_start);
+                } else if child_kind == "`" {
+                    backtick_positions.push(child_start);
+                }
+            }
+        }
 
-        if backtick_count >= 2 {
-            // This inline node contains backticks - it's inline code
-            // Highlight backticks and detect content between them
-            let node_start = node.start_byte();
-            let node_end = node.end_byte();
-            let text = source_str.get(node_start..node_end).unwrap_or("");
+        // Sort positions (they should already be in order, but ensure it)
+        asterisk_positions.sort();
+        backtick_positions.sort();
 
-            // Find positions of backticks
-            let backtick_positions: Vec<usize> = text
-                .match_indices('`')
-                .map(|(i, _)| node_start + i)
-                .collect();
+        // Handle inline code (backticks) first
+        let has_backticks = backtick_positions.len() >= 2;
+        let has_asterisks = asterisk_positions.len() >= 2;
 
+        if has_backticks {
             // Highlight each backtick
             for &pos in &backtick_positions {
                 if pos >= start_byte && pos < end_byte {
@@ -199,27 +203,99 @@ fn visit(
                     });
                 }
             }
-
             // Highlight content between backticks as inline code
-            if backtick_positions.len() >= 2 {
-                for i in 0..backtick_positions.len() - 1 {
-                    let code_start = backtick_positions[i] + 1;
-                    let code_end = backtick_positions[i + 1];
-                    if code_start < code_end && code_start < end_byte && code_end > start_byte {
-                        let s = code_start.max(start_byte);
-                        let e = code_end.min(end_byte);
-                        if s < e {
-                            spans.push(HighlightSpan {
-                                start: s,
-                                end: e,
-                                kind: HighlightKind::InlineCode,
-                            });
-                        }
+            for i in 0..backtick_positions.len() - 1 {
+                let code_start = backtick_positions[i] + 1;
+                let code_end = backtick_positions[i + 1];
+                if code_start < code_end && code_start < end_byte && code_end > start_byte {
+                    let s = code_start.max(start_byte);
+                    let e = code_end.min(end_byte);
+                    if s < e {
+                        spans.push(HighlightSpan {
+                            start: s,
+                            end: e,
+                            kind: HighlightKind::InlineCode,
+                        });
                     }
                 }
             }
+        } else if has_asterisks {
+            // Handle emphasis markers - pair up asterisks and highlight content between them
+            let mut i = 0;
+            while i < asterisk_positions.len() - 1 {
+                let open_start = asterisk_positions[i];
+                // Find the closing marker (same count of asterisks as opening)
+                let open_count = if i + 1 < asterisk_positions.len()
+                    && asterisk_positions[i + 1] == open_start + 1
+                {
+                    2 // double asterisk like **
+                } else {
+                    1
+                };
+
+                // Find matching close
+                let mut j = i + open_count;
+                while j < asterisk_positions.len() {
+                    let close_start = asterisk_positions[j];
+                    let close_count = if j + 1 < asterisk_positions.len()
+                        && asterisk_positions[j + 1] == close_start + 1
+                    {
+                        2
+                    } else {
+                        1
+                    };
+
+                    if close_count == open_count {
+                        // Highlight opening markers
+                        for k in 0..open_count {
+                            let pos = asterisk_positions[i + k];
+                            if pos >= start_byte && pos < end_byte {
+                                spans.push(HighlightSpan {
+                                    start: pos,
+                                    end: pos + 1,
+                                    kind: HighlightKind::Emphasis,
+                                });
+                            }
+                        }
+                        // Highlight content between markers as Emphasis
+                        let content_start = open_start + open_count;
+                        let content_end = close_start;
+                        if content_start < content_end
+                            && content_start < end_byte
+                            && content_end > start_byte
+                        {
+                            let s = content_start.max(start_byte);
+                            let e = content_end.min(end_byte);
+                            if s < e {
+                                spans.push(HighlightSpan {
+                                    start: s,
+                                    end: e,
+                                    kind: HighlightKind::Emphasis,
+                                });
+                            }
+                        }
+                        // Highlight closing markers
+                        for k in 0..close_count {
+                            let pos = asterisk_positions[j + k];
+                            if pos >= start_byte && pos < end_byte {
+                                spans.push(HighlightSpan {
+                                    start: pos,
+                                    end: pos + 1,
+                                    kind: HighlightKind::Emphasis,
+                                });
+                            }
+                        }
+                        i = j + close_count;
+                        break;
+                    }
+                    j += 1;
+                }
+                if j >= asterisk_positions.len() {
+                    i += 1;
+                }
+            }
         } else {
-            // Not inline code - recurse normally
+            // No markers with content - recurse normally
             for i in 0..node.child_count() {
                 if let Some(child) = node.child(i as u32) {
                     visit(child, lang, source, start_byte, end_byte, spans);
