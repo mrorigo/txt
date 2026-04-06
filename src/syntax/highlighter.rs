@@ -20,6 +20,8 @@ pub enum HighlightKind {
     Link,
     Emphasis,
     CodeBlock,
+    InlineCode,
+    ListMarker,
 }
 
 /// A highlighted byte range within the buffer.
@@ -78,6 +80,8 @@ pub fn style_for_kind(kind: HighlightKind, theme: &ThemeColors) -> Style {
             .fg(theme.syn_emphasis)
             .add_modifier(Modifier::ITALIC),
         HighlightKind::CodeBlock => Style::default().fg(theme.syn_codeblock),
+        HighlightKind::InlineCode => Style::default().fg(theme.syn_codeblock),
+        HighlightKind::ListMarker => Style::default().fg(theme.syn_link),
     }
 }
 
@@ -161,11 +165,30 @@ fn visit(
     }
 
     // Special-case for markdown: 'inline' nodes contain text with potential formatting.
-    // Don't treat as leaf - always recurse.
+    // Don't treat as leaf - always recurse. Handle inline code specially.
     if lang == Lang::Markdown && kind == "inline" {
-        for i in 0..node.child_count() {
+        let child_count = node.child_count();
+        let mut in_code_span = false;
+        for i in 0..child_count {
             if let Some(child) = node.child(i as u32) {
-                visit(child, lang, source, start_byte, end_byte, spans);
+                let child_kind = child.kind();
+                if child_kind == "`" {
+                    in_code_span = !in_code_span;
+                    visit(child, lang, source, start_byte, end_byte, spans);
+                } else if in_code_span && child.child_count() == 0 {
+                    // Text inside backticks - highlight as inline code
+                    let s = child.start_byte().max(start_byte);
+                    let e = child.end_byte().min(end_byte);
+                    if s < e {
+                        spans.push(HighlightSpan {
+                            start: s,
+                            end: e,
+                            kind: HighlightKind::InlineCode,
+                        });
+                    }
+                } else {
+                    visit(child, lang, source, start_byte, end_byte, spans);
+                }
             }
         }
         return;
@@ -278,6 +301,10 @@ fn markdown_leaf(kind: &str, _parent: &str) -> Option<HighlightKind> {
         "[" | "]" | "(" | ")" => Some(HighlightKind::Link),
         "*" | "_" | "`" | "**" | "***" | "__" | "___" => Some(HighlightKind::Emphasis),
         "fenced_code_block_delimiter" => Some(HighlightKind::CodeBlock),
+        "block_quote_marker" | "block_continuation" => Some(HighlightKind::Emphasis),
+        "list_marker_minus" | "list_marker_plus" | "list_marker_asterisk" => {
+            Some(HighlightKind::ListMarker)
+        }
         _ => None,
     }
 }
@@ -849,6 +876,34 @@ mod tests {
         );
     }
 
+    #[test]
+    fn markdown_list_marker() {
+        let src = "- item 1\n- item 2";
+        let tree = parse_markdown(src);
+        let spans = spans_for(src, &tree, Lang::Markdown);
+        assert!(
+            spans
+                .iter()
+                .any(|s| s.kind == HighlightKind::ListMarker && &src[s.start..s.end] == "- "),
+            "expected ListMarker span for '- ', got: {:?}",
+            spans
+        );
+    }
+
+    #[test]
+    fn markdown_inline_code() {
+        let src = "text `code` more";
+        let tree = parse_markdown(src);
+        let spans = spans_for(src, &tree, Lang::Markdown);
+        assert!(
+            spans
+                .iter()
+                .any(|s| s.kind == HighlightKind::Emphasis && &src[s.start..s.end] == "`"),
+            "expected backtick as Emphasis, got: {:?}",
+            spans
+        );
+    }
+
     // ── Filtering ─────────────────────────────────────────────────────────────
 
     #[test]
@@ -897,6 +952,12 @@ mod tests {
             HighlightKind::Function,
             HighlightKind::Attribute,
             HighlightKind::Punctuation,
+            HighlightKind::Heading,
+            HighlightKind::Link,
+            HighlightKind::Emphasis,
+            HighlightKind::CodeBlock,
+            HighlightKind::InlineCode,
+            HighlightKind::ListMarker,
         ];
         let default_style = Style::default().fg(Color::White);
         for kind in kinds {
