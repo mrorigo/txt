@@ -235,12 +235,12 @@ fn visit(
         return;
     }
 
-    // Special-case for markdown: ATX headings - highlight marker and recurse into content
+    // Special-case for markdown: ATX headings - highlight entire heading content as Heading
     if lang == Lang::Markdown && kind.starts_with("atx_heading") {
         for i in 0..node.child_count() {
             if let Some(child) = node.child(i as u32) {
                 let child_kind = child.kind();
-                // The marker is highlighted as Heading, content recurses normally
+                // The marker is highlighted as Heading
                 if child_kind.starts_with("atx_h") && child_kind.ends_with("marker") {
                     let s = child.start_byte().max(start_byte);
                     let e = child.end_byte().min(end_byte);
@@ -251,8 +251,9 @@ fn visit(
                             kind: HighlightKind::Heading,
                         });
                     }
-                } else {
-                    visit(child, lang, source, start_byte, end_byte, spans);
+                } else if child.kind() == "inline" {
+                    // Highlight heading content inline nodes as Heading too
+                    visit_markdown_inline_as_heading(child, source, start_byte, end_byte, spans);
                 }
             }
         }
@@ -264,7 +265,7 @@ fn visit(
         for i in 0..node.child_count() {
             if let Some(child) = node.child(i as u32) {
                 let child_kind = child.kind();
-                if child_kind == "block_quote_marker" || child_kind == "block_continuation" {
+                if child_kind == "block_quote_marker" {
                     let s = child.start_byte().max(start_byte);
                     let e = child.end_byte().min(end_byte);
                     if s < e {
@@ -565,6 +566,35 @@ fn handle_markdown_code_fence(
                     spans,
                 );
             }
+        }
+    }
+}
+
+/// Highlight markdown inline node content as Heading (for heading content)
+#[allow(clippy::only_used_in_recursion)]
+fn visit_markdown_inline_as_heading(
+    node: Node<'_>,
+    source: &[u8],
+    start_byte: usize,
+    end_byte: usize,
+    spans: &mut Vec<HighlightSpan>,
+) {
+    let source_str = std::str::from_utf8(source).unwrap_or("");
+    let node_start = node.start_byte();
+    let node_end = node.end_byte();
+
+    // Get text of inline node
+    if source_str.get(node_start..node_end).is_some() {
+        // For inline content in headings, just highlight the whole thing as Heading
+        // (the marker is handled separately)
+        let s = node_start.max(start_byte);
+        let e = node_end.min(end_byte);
+        if s < e {
+            spans.push(HighlightSpan {
+                start: s,
+                end: e,
+                kind: HighlightKind::Heading,
+            });
         }
     }
 }
@@ -965,6 +995,41 @@ mod tests {
     }
 
     #[test]
+    fn markdown_heading_content_highlighted() {
+        let src = "# Hello World";
+        let tree = parse_markdown(src);
+        let spans = spans_for(src, &tree, Lang::Markdown);
+        assert!(
+            spans
+                .iter()
+                .any(|s| s.kind == HighlightKind::Heading && &src[s.start..s.end] == "#"),
+            "expected Heading span for '#', got: {:?}",
+            spans
+        );
+        assert!(
+            spans
+                .iter()
+                .any(|s| s.kind == HighlightKind::Heading && s.start == 2),
+            "expected Heading span starting at byte 2, got: {:?}",
+            spans
+        );
+    }
+
+    #[test]
+    fn markdown_block_quote_marker() {
+        let src = "> quote line";
+        let tree = parse_markdown(src);
+        let spans = spans_for(src, &tree, Lang::Markdown);
+        assert!(
+            spans
+                .iter()
+                .any(|s| s.kind == HighlightKind::Emphasis && &src[s.start..s.end] == "> "),
+            "expected Emphasis span for '> ', got: {:?}",
+            spans
+        );
+    }
+
+    #[test]
     fn markdown_list_marker() {
         let src = "- item 1\n- item 2";
         let tree = parse_markdown(src);
@@ -1030,7 +1095,6 @@ mod tests {
     fn style_for_kind_produces_distinct_styles() {
         use ratatui::style::Color;
         let theme = crate::theme::ThemeColors::for_theme(&crate::config::Theme::Default);
-        // Each kind should produce a non-default style.
         let kinds = [
             HighlightKind::Keyword,
             HighlightKind::String,
