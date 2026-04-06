@@ -8,7 +8,8 @@
 
 **This is working?** 
 
-**Bold and italic**
+*Bold and italic*
+
 
   and *italic* and `inline code`
 ~~strikethrough~~ here

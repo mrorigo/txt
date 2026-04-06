@@ -20,6 +20,8 @@ pub struct ThemeColors {
     pub syn_heading: Color,
     pub syn_link: Color,
     pub syn_emphasis: Color,
+    pub syn_bold: Color,
+    pub syn_italic: Color,
     pub syn_codeblock: Color,
     // ── Editor text area ──────────────────────────────────────────────────────
     pub text: Color,
@@ -63,6 +65,8 @@ impl ThemeColors {
             syn_heading: Color::Cyan,
             syn_link: Color::Rgb(78, 201, 176),
             syn_emphasis: Color::Rgb(255, 203, 100),
+            syn_bold: Color::Rgb(255, 180, 100),
+            syn_italic: Color::Rgb(255, 220, 150),
             syn_codeblock: Color::Rgb(78, 201, 176),
             text: Color::White,
             selection_bg: Color::Rgb(60, 80, 120),
@@ -93,18 +97,20 @@ impl ThemeColors {
             syn_heading: Color::Rgb(102, 217, 239),     // #66d9ef cyan
             syn_link: Color::Rgb(102, 217, 239),        // #66d9ef cyan
             syn_emphasis: Color::Rgb(255, 203, 100),    // amber/orange - visible
-            syn_codeblock: Color::Rgb(117, 113, 94),    // #75715e gray-brown
-            text: Color::Rgb(248, 248, 242),            // #f8f8f2
-            selection_bg: Color::Rgb(73, 72, 62),       // #49483e
-            line_num_cur: Color::Rgb(230, 219, 116),    // yellow
-            statusbar_bg: Color::Rgb(39, 40, 34),       // #272822
+            syn_bold: Color::Rgb(255, 140, 50),
+            syn_italic: Color::Rgb(255, 200, 100),
+            syn_codeblock: Color::Rgb(117, 113, 94), // #75715e gray-brown
+            text: Color::Rgb(248, 248, 242),         // #f8f8f2
+            selection_bg: Color::Rgb(73, 72, 62),    // #49483e
+            line_num_cur: Color::Rgb(230, 219, 116), // yellow
+            statusbar_bg: Color::Rgb(39, 40, 34),    // #272822
             statusbar_modified_fg: Color::Rgb(249, 38, 114), // pink
-            sidebar_bg: Color::Rgb(39, 40, 34),         // #272822
-            sidebar_fg: Color::Rgb(248, 248, 242),      // #f8f8f2
-            sidebar_dir_fg: Color::Rgb(102, 217, 239),  // #66d9ef cyan
-            sidebar_sel_bg: Color::Rgb(73, 72, 62),     // #49483e
-            picker_bg: Color::Rgb(39, 40, 34),          // #272822
-            picker_sel_bg: Color::Rgb(73, 72, 62),      // #49483e
+            sidebar_bg: Color::Rgb(39, 40, 34),      // #272822
+            sidebar_fg: Color::Rgb(248, 248, 242),   // #f8f8f2
+            sidebar_dir_fg: Color::Rgb(102, 217, 239), // #66d9ef cyan
+            sidebar_sel_bg: Color::Rgb(73, 72, 62),  // #49483e
+            picker_bg: Color::Rgb(39, 40, 34),       // #272822
+            picker_sel_bg: Color::Rgb(73, 72, 62),   // #49483e
         }
     }
 
@@ -112,29 +118,31 @@ impl ThemeColors {
 
     fn gruvbox() -> Self {
         Self {
-            syn_keyword: Color::Rgb(251, 73, 52),           // #fb4934 red
-            syn_string: Color::Rgb(184, 187, 38),           // #b8bb26 yellow-green
-            syn_comment: Color::Rgb(146, 131, 116),         // #928374 gray
-            syn_number: Color::Rgb(211, 134, 155),          // #d3869b pink
-            syn_type: Color::Rgb(142, 192, 124),            // #8ec07c green
-            syn_function: Color::Rgb(250, 189, 47),         // #fabd2f yellow
-            syn_attribute: Color::Rgb(131, 165, 152),       // #83a598 teal
-            syn_punctuation: Color::Rgb(168, 153, 132),     // #a89984 warm gray
-            syn_heading: Color::Rgb(131, 165, 152),         // #83a598 teal
-            syn_link: Color::Rgb(131, 165, 152),            // #83a598 teal
-            syn_emphasis: Color::Rgb(250, 189, 47),         // #fabd2f yellow - visible
-            syn_codeblock: Color::Rgb(168, 153, 132),       // #a89984 warm gray
-            text: Color::Rgb(235, 219, 178),                // #ebdbb2
-            selection_bg: Color::Rgb(80, 73, 69),           // dark warm
-            line_num_cur: Color::Rgb(250, 189, 47),         // yellow
-            statusbar_bg: Color::Rgb(50, 48, 47),           // #32302f
+            syn_keyword: Color::Rgb(251, 73, 52),       // #fb4934 red
+            syn_string: Color::Rgb(184, 187, 38),       // #b8bb26 yellow-green
+            syn_comment: Color::Rgb(146, 131, 116),     // #928374 gray
+            syn_number: Color::Rgb(211, 134, 155),      // #d3869b pink
+            syn_type: Color::Rgb(142, 192, 124),        // #8ec07c green
+            syn_function: Color::Rgb(250, 189, 47),     // #fabd2f yellow
+            syn_attribute: Color::Rgb(131, 165, 152),   // #83a598 teal
+            syn_punctuation: Color::Rgb(168, 153, 132), // #a89984 warm gray
+            syn_heading: Color::Rgb(131, 165, 152),     // #83a598 teal
+            syn_link: Color::Rgb(131, 165, 152),        // #83a598 teal
+            syn_emphasis: Color::Rgb(250, 189, 47),     // #fabd2f yellow - visible
+            syn_bold: Color::Rgb(251, 140, 60),
+            syn_italic: Color::Rgb(250, 200, 100),
+            syn_codeblock: Color::Rgb(168, 153, 132), // #a89984 warm gray
+            text: Color::Rgb(235, 219, 178),          // #ebdbb2
+            selection_bg: Color::Rgb(80, 73, 69),     // dark warm
+            line_num_cur: Color::Rgb(250, 189, 47),   // yellow
+            statusbar_bg: Color::Rgb(50, 48, 47),     // #32302f
             statusbar_modified_fg: Color::Rgb(251, 73, 52), // red
-            sidebar_bg: Color::Rgb(29, 32, 33),             // #1d2021
-            sidebar_fg: Color::Rgb(213, 196, 161),          // #d5c4a1
-            sidebar_dir_fg: Color::Rgb(131, 165, 152),      // teal
-            sidebar_sel_bg: Color::Rgb(80, 73, 69),         // dark warm
-            picker_bg: Color::Rgb(29, 32, 33),              // #1d2021
-            picker_sel_bg: Color::Rgb(80, 73, 69),          // dark warm
+            sidebar_bg: Color::Rgb(29, 32, 33),       // #1d2021
+            sidebar_fg: Color::Rgb(213, 196, 161),    // #d5c4a1
+            sidebar_dir_fg: Color::Rgb(131, 165, 152), // teal
+            sidebar_sel_bg: Color::Rgb(80, 73, 69),   // dark warm
+            picker_bg: Color::Rgb(29, 32, 33),        // #1d2021
+            picker_sel_bg: Color::Rgb(80, 73, 69),    // dark warm
         }
     }
 
@@ -153,11 +161,13 @@ impl ThemeColors {
             syn_heading: Color::Rgb(136, 192, 208),   // #88c0d0 nord8 light blue
             syn_link: Color::Rgb(136, 192, 208),      // #88c0d0 nord8 light blue
             syn_emphasis: Color::Rgb(235, 203, 139),  // #ebcb8b nord13 yellow - visible
-            syn_codeblock: Color::Rgb(76, 86, 106),   // nord3 dark
-            text: Color::Rgb(216, 222, 233),          // #d8dee9 nord4
-            selection_bg: Color::Rgb(67, 76, 94),     // #434c5e nord2
-            line_num_cur: Color::Rgb(129, 161, 193),  // nord9 blue
-            statusbar_bg: Color::Rgb(46, 52, 64),     // #2e3440 nord0
+            syn_bold: Color::Rgb(235, 180, 100),
+            syn_italic: Color::Rgb(235, 210, 150),
+            syn_codeblock: Color::Rgb(76, 86, 106), // nord3 dark
+            text: Color::Rgb(216, 222, 233),        // #d8dee9 nord4
+            selection_bg: Color::Rgb(67, 76, 94),   // #434c5e nord2
+            line_num_cur: Color::Rgb(129, 161, 193), // nord9 blue
+            statusbar_bg: Color::Rgb(46, 52, 64),   // #2e3440 nord0
             statusbar_modified_fg: Color::Rgb(235, 203, 139), // yellow
             sidebar_bg: Color::Rgb(36, 41, 51),
             sidebar_fg: Color::Rgb(216, 222, 233),     // nord4

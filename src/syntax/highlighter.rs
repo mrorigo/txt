@@ -19,6 +19,8 @@ pub enum HighlightKind {
     Heading,
     Link,
     Emphasis,
+    Bold,
+    Italic,
     CodeBlock,
     InlineCode,
     ListMarker,
@@ -78,6 +80,12 @@ pub fn style_for_kind(kind: HighlightKind, theme: &ThemeColors) -> Style {
         HighlightKind::Link => Style::default().fg(theme.syn_link),
         HighlightKind::Emphasis => Style::default()
             .fg(theme.syn_emphasis)
+            .add_modifier(Modifier::ITALIC),
+        HighlightKind::Bold => Style::default()
+            .fg(theme.syn_bold)
+            .add_modifier(Modifier::BOLD),
+        HighlightKind::Italic => Style::default()
+            .fg(theme.syn_italic)
             .add_modifier(Modifier::ITALIC),
         HighlightKind::CodeBlock => Style::default().fg(theme.syn_codeblock),
         HighlightKind::InlineCode => Style::default().fg(theme.syn_codeblock),
@@ -246,6 +254,13 @@ fn visit(
                     };
 
                     if close_count == open_count {
+                        // Determine kind: Bold for **, Italic for *
+                        let content_kind = if open_count == 2 {
+                            HighlightKind::Bold
+                        } else {
+                            HighlightKind::Italic
+                        };
+
                         // Highlight opening markers
                         for k in 0..open_count {
                             let pos = asterisk_positions[i + k];
@@ -257,7 +272,7 @@ fn visit(
                                 });
                             }
                         }
-                        // Highlight content between markers as Emphasis
+                        // Highlight content between markers as Bold or Italic
                         let content_start = open_start + open_count;
                         let content_end = close_start;
                         if content_start < content_end
@@ -270,7 +285,7 @@ fn visit(
                                 spans.push(HighlightSpan {
                                     start: s,
                                     end: e,
-                                    kind: HighlightKind::Emphasis,
+                                    kind: content_kind,
                                 });
                             }
                         }
@@ -1124,18 +1139,34 @@ mod tests {
         let src = "**bold** and *italic*";
         let tree = parse_markdown(src);
         let spans = spans_for(src, &tree, Lang::Markdown);
+        // Check markers are highlighted as Emphasis
         assert!(
             spans
                 .iter()
                 .any(|s| s.kind == HighlightKind::Emphasis && s.start == 0),
-            "expected Emphasis span at start, got: {:?}",
+            "expected Emphasis span for ** markers, got: {:?}",
             spans
         );
         assert!(
             spans
                 .iter()
                 .any(|s| s.kind == HighlightKind::Emphasis && s.start == 13),
-            "expected Emphasis span for italic marker, got: {:?}",
+            "expected Emphasis span for * marker, got: {:?}",
+            spans
+        );
+        // Check content is highlighted as Bold and Italic
+        assert!(
+            spans
+                .iter()
+                .any(|s| s.kind == HighlightKind::Bold && s.start == 2 && s.end == 6),
+            "expected Bold span for 'bold', got: {:?}",
+            spans
+        );
+        assert!(
+            spans
+                .iter()
+                .any(|s| s.kind == HighlightKind::Italic && s.start == 14 && s.end == 20),
+            "expected Italic span for 'italic', got: {:?}",
             spans
         );
     }
@@ -1204,6 +1235,8 @@ mod tests {
             HighlightKind::Heading,
             HighlightKind::Link,
             HighlightKind::Emphasis,
+            HighlightKind::Bold,
+            HighlightKind::Italic,
             HighlightKind::CodeBlock,
             HighlightKind::InlineCode,
             HighlightKind::ListMarker,
