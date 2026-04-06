@@ -1044,6 +1044,27 @@ mod tests {
     }
 
     #[test]
+    fn markdown_emphasis_markers() {
+        let src = "**bold** and *italic*";
+        let tree = parse_markdown(src);
+        let spans = spans_for(src, &tree, Lang::Markdown);
+        assert!(
+            spans
+                .iter()
+                .any(|s| s.kind == HighlightKind::Emphasis && s.start == 0),
+            "expected Emphasis span at start, got: {:?}",
+            spans
+        );
+        assert!(
+            spans
+                .iter()
+                .any(|s| s.kind == HighlightKind::Emphasis && s.start == 13),
+            "expected Emphasis span for italic marker, got: {:?}",
+            spans
+        );
+    }
+
+    #[test]
     fn markdown_inline_code() {
         let src = "text `code` more";
         let tree = parse_markdown(src);
